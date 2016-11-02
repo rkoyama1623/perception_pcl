@@ -144,10 +144,16 @@ transformPointCloud (const Eigen::Matrix4f &transform, const sensor_msgs::PointC
     memcpy (&out.data[0], &in.data[0], in.data.size ());
   }
 
-  Eigen::Array4i xyz_offset (in.fields[x_idx].offset, in.fields[y_idx].offset, in.fields[z_idx].offset, 0);
-
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
   for (size_t i = 0; i < in.width * in.height; ++i)
   {
+    Eigen::Array4i xyz_offset (in.fields[x_idx].offset, in.fields[y_idx].offset, in.fields[z_idx].offset, 0);
+    xyz_offset[0] += in.point_step * i;
+    xyz_offset[1] += in.point_step * i;
+    xyz_offset[2] += in.point_step * i;
+
     Eigen::Vector4f pt (*(float*)&in.data[xyz_offset[0]], *(float*)&in.data[xyz_offset[1]], *(float*)&in.data[xyz_offset[2]], 1);
     Eigen::Vector4f pt_out;
     
@@ -185,7 +191,6 @@ transformPointCloud (const Eigen::Matrix4f &transform, const sensor_msgs::PointC
     memcpy (&out.data[xyz_offset[2]], &pt_out[2], sizeof (float));
   
     
-    xyz_offset += in.point_step;
   }
 
   // Check if the viewpoint information is present
